@@ -103,18 +103,28 @@ function onResults(results) {
 function draw() {
   // 비디오를 캔버스에 그립니다. (배경 역할)
   if (video) {
+    // 💡 [추가] 좌우 반전을 위한 변환 적용
+    push();
+    translate(width, 0); // X축을 캔버스 너비만큼 이동
+    scale(-1, 1); // X축을 기준으로 반전
     image(video, 0, 0, width, height);
+    pop(); // 변환 상태 초기화
   } else {
     background(220); // 비디오가 준비되지 않은 경우에 대비
   }
 
   // 입술 데이터가 있으면 트리거 로직 실행
   if (mouthCenter && mouthDistance > 0) {
+    // 💡 [추가] 화면에 보이는 반전된 위치에 맞게 mouthCenter의 X 좌표를 보정
+    let mirroredMouthCenter = mouthCenter.copy();
+    mirroredMouthCenter.x = width - mirroredMouthCenter.x;
+
     // 이전 거리와 현재 거리 비교 — 입을 벌렸을 때 발동
     if (previousLipDistance > 0 && mouthDistance > previousLipDistance + 6) {
       for (let i = 0; i < rings.length; i++) {
         for (let j = 0; j < rings[i].length; j++) {
-          trigger(rings[i][j], mouthCenter);
+          // 💡 [수정] 반전된 위치를 기준으로 trigger 실행
+          trigger(rings[i][j], mirroredMouthCenter);
         }
       }
       print('triggered by mouth open');
@@ -123,7 +133,9 @@ function draw() {
 
     // 디버그: 입 주변 위치 시각화 (원하면 사용)
     noFill();
-    ellipse(mouthCenter.x, mouthCenter.y, 10, 10);
+    // stroke(0, 255, 0);
+    // 💡 [수정] 반전된 위치에 디버그 원 그리기
+    ellipse(mirroredMouthCenter.x, mirroredMouthCenter.y, 10, 10);
   } else {
     // MediaPipe 로드 실패나 얼굴 미검출 시 마우스 클릭으로 폴백 트리거
     if (mouseIsPressed && !lastMousePressed) {
