@@ -3,36 +3,61 @@ let rings = [];
 let numRing = 5;
 let fonts = [];
 
-// ml5 Variables
-let faceMesh;
+// MediaPipe Variables
+let faceMeshMP = null;
+let cameraMP = null;
+let mouthCenter = null;
+let mouthDistance = 0;
+let previousLipDistance = 0;
+let lastMousePressed = false;
+
+// 비디오 변수를 전역으로 선언
 let video;
-let faces = [];
-let options = { maxFaces: 1, refineLandmarks: false, flipped: true };
-let previousLipDistance; // 초기값 추가
 
 function preload() {
-  // faceMesh = ml5.faceMesh(options);
-
+  // 폰트는 프로젝트 폴더에 있을 때만 로드, 실패하면 브라우저 기본폰트 사용됨
   fonts[0] = loadFont('fonts/BebasNeue-Regular.ttf');
   fonts[1] = loadFont('fonts/Kanit-Black.ttf');
   fonts[2] = loadFont('fonts/Roboto-Regular.ttf');
 }
 
 function setup() {
-  createCanvas(640, 480);
-  video = createCapture(VIDEO, { flipped: true });
+  // 💡 [수정] 캔버스 객체를 변수에 할당하고 .parent()로 HTML 요소에 연결
+  const canvas = createCanvas(640, 480);
+  canvas.parent('p5-container');
+
+  // p5 비디오 (HTMLVideoElement는 video.elt)
+  video = createCapture(VIDEO);
   video.size(640, 480);
-  video.hide();
-  // faceMesh.detectStart(video, gotFaces);
+  video.hide(); // DOM 요소로 표시되는 것은 숨김. 캔버스에 직접 그릴 예정.
 
-  try {
-    faceMesh = ml5.faceMesh(options);
-    faceMesh.detectStart(video, gotFaces);
-  } catch (e) {
-    console.warn('faceMesh init failed — continuing without face detection', e);
-    faceMesh = null;
-  }
+  // MediaPipe FaceMesh 초기화
+  faceMeshMP = new FaceMesh({
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+  });
 
+  faceMeshMP.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  });
+
+  faceMeshMP.onResults(onResults);
+
+  // camera_utils의 Camera를 사용해 p5 비디오 엘리먼트를 프레임 전송
+  cameraMP = new Camera(video.elt, {
+    onFrame: async () => {
+      // send에는 video element 전달
+      await faceMeshMP.send({ image: video.elt });
+    },
+    width: 640,
+    height: 480,
+  });
+  cameraMP.start();
+
+  // 글자 링 생성
   for (let i = 0; i < numRing; i++) {
     rings[i] = [];
 
@@ -51,43 +76,69 @@ function setup() {
   }
 }
 
+function onResults(results) {
+  // MediaPipe 결과에서 첫 얼굴의 랜드마크 사용
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    const lm = results.multiFaceLandmarks[0];
+
+    // MediaPipe FaceMesh의 468 포인트 중 입술 중심에 가까운 인덱스 사용 (예: 13, 14)
+    // 필요하면 다른 인덱스로 조정
+    const up = lm[13];
+    const low = lm[14];
+
+    // normalized 좌표를 캔버스 픽셀 좌표로 변환
+    const upX = up.x * width;
+    const upY = up.y * height;
+    const lowX = low.x * width;
+    const lowY = low.y * height;
+
+    mouthCenter = createVector((upX + lowX) / 2, (upY + lowY) / 2);
+    mouthDistance = dist(upX, upY, lowX, lowY);
+  } else {
+    mouthCenter = null;
+    mouthDistance = 0;
+  }
+}
+
 function draw() {
-  background(220);
+  // 비디오를 캔버스에 그립니다. (배경 역할)
+  if (video) {
+    image(video, 0, 0, width, height);
+  } else {
+    background(220); // 비디오가 준비되지 않은 경우에 대비
+  }
 
-  image(video, 0, 0, width, height);
-  if (faces.length > 0 && faces[0].lips) {
-    let topLeftLip = createVector(faces[0].lips.x, faces[0].lips.y);
-    let bottomRightLip = createVector(
-      faces[0].lips.x + faces[0].lips.width,
-      faces[0].lips.y + faces[0].lips.height
-    );
-    let centerLip = createVector(faces[0].lips.centerX, faces[0].lips.centerY);
-    noFill();
-    stroke(0, 255, 0);
-    // ellipse(topLeftLip.x, topLeftLip.y, 10, 10);
-    // ellipse(bottomRightLip.x, bottomRightLip.y, 10, 10);
-    // ellipse(centerLip.x, centerLip.y, 10, 10);
-
-    let lipDistance = dist(
-      topLeftLip.x,
-      topLeftLip.y,
-      bottomRightLip.x,
-      bottomRightLip.y
-    );
-
-    if (previousLipDistance > 90 && previousLipDistance - lipDistance > 5) {
+  // 입술 데이터가 있으면 트리거 로직 실행
+  if (mouthCenter && mouthDistance > 0) {
+    // 이전 거리와 현재 거리 비교 — 입을 벌렸을 때 발동
+    if (previousLipDistance > 0 && mouthDistance > previousLipDistance + 6) {
       for (let i = 0; i < rings.length; i++) {
         for (let j = 0; j < rings[i].length; j++) {
-          let mouth = createVector(centerLip.x, centerLip.y);
+          trigger(rings[i][j], mouthCenter);
+        }
+      }
+      print('triggered by mouth open');
+    }
+    previousLipDistance = mouthDistance;
+
+    // 디버그: 입 주변 위치 시각화 (원하면 사용)
+    noFill();
+    ellipse(mouthCenter.x, mouthCenter.y, 10, 10);
+  } else {
+    // MediaPipe 로드 실패나 얼굴 미검출 시 마우스 클릭으로 폴백 트리거
+    if (mouseIsPressed && !lastMousePressed) {
+      let mouth = createVector(width / 2, height / 2);
+      for (let i = 0; i < rings.length; i++) {
+        for (let j = 0; j < rings[i].length; j++) {
           trigger(rings[i][j], mouth);
         }
       }
-
-      print('triggered');
+      print('fallback triggered by mouse press');
     }
-    previousLipDistance = lipDistance;
+    lastMousePressed = mouseIsPressed;
   }
 
+  // update & display letters
   for (let i = 0; i < rings.length; i++) {
     for (let j = 0; j < rings[i].length; j++) {
       rings[i][j].update();
@@ -106,8 +157,4 @@ function trigger(letter, mouth) {
   letter.applyForce(force);
 
   letter.angleV = map(distance, 0, width, 0.01, 0.1) * random(0.5, 2);
-}
-
-function gotFaces(results) {
-  faces = results;
 }

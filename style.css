@@ -1,8 +1,25 @@
-html,
-body {
+/* style.css */
+body,
+html {
+  /* 💡 [수정] 화면 전체를 채우고 여백 제거 */
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden; /* 스크롤바 방지 */
+
+  /* 💡 [수정] Flexbox를 사용한 중앙 정렬 */
+  display: flex;
+  justify-content: center; /* 수평 중앙 정렬 */
+  align-items: center; /* 수직 중앙 정렬 */
+  background-color: #ffffff; /* 캔버스 외의 배경색 */
 }
+
+/* 캔버스가 생성될 main 태그에 크기 지정 */
+#p5-container {
+  width: 640px;
+  height: 480px;
+}
+
 canvas {
   display: block;
 }
