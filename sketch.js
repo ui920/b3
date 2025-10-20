@@ -8,10 +8,10 @@ let faceMesh;
 let video;
 let faces = [];
 let options = { maxFaces: 1, refineLandmarks: false, flipped: true };
-let previousLipDistance;
+let previousLipDistance; // 초기값 추가
 
 function preload() {
-  faceMesh = ml5.faceMesh(options);
+  // faceMesh = ml5.faceMesh(options);
 
   fonts[0] = loadFont('fonts/BebasNeue-Regular.ttf');
   fonts[1] = loadFont('fonts/Kanit-Black.ttf');
@@ -23,7 +23,15 @@ function setup() {
   video = createCapture(VIDEO, { flipped: true });
   video.size(640, 480);
   video.hide();
-  faceMesh.detectStart(video, gotFaces);
+  // faceMesh.detectStart(video, gotFaces);
+
+  try {
+    faceMesh = ml5.faceMesh(options);
+    faceMesh.detectStart(video, gotFaces);
+  } catch (e) {
+    console.warn('faceMesh init failed — continuing without face detection', e);
+    faceMesh = null;
+  }
 
   for (let i = 0; i < numRing; i++) {
     rings[i] = [];
