@@ -2,6 +2,7 @@
 let rings = [];
 let numRing = 5;
 let fonts = [];
+let koreanFont;
 
 // MediaPipe Variables
 let faceMeshMP = null;
@@ -15,7 +16,10 @@ let lastMousePressed = false;
 let video;
 
 function preload() {
-  // 폰트는 프로젝트 폴더에 있을 때만 로드, 실패하면 브라우저 기본폰트 사용됨
+  // ✅ 한글 폰트 로드
+  koreanFont = loadFont('fonts/Pretendard-Regular.ttf');
+
+  // ✅ 기존 영문 폰트 로드
   fonts[0] = loadFont('fonts/BebasNeue-Regular.ttf');
   fonts[1] = loadFont('fonts/Kanit-Black.ttf');
   fonts[2] = loadFont('fonts/Roboto-Regular.ttf');
