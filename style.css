@@ -16,10 +16,30 @@ html {
 
 /* 캔버스가 생성될 main 태그에 크기 지정 */
 #p5-container {
-  width: 640px;
-  height: 480px;
+  width: 800px;
+  height: 600px;
 }
 
 canvas {
   display: block;
+}
+
+/* instructions */
+.wrapper {
+  z-index: 1;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: fit-content;
+  padding: 1.6rem;
+  display: flex;
+  justify-content: center;
+}
+
+.instructions {
+  color: white;
+  background: rgb(55, 55, 55);
+  padding-right: 1.5rem !important;
+  /* border-radius: 1rem; */
+  line-height: 140%;
 }

@@ -23,12 +23,12 @@ function preload() {
 
 function setup() {
   // 💡 [수정] 캔버스 객체를 변수에 할당하고 .parent()로 HTML 요소에 연결
-  const canvas = createCanvas(640, 480);
+  const canvas = createCanvas(800, 600);
   canvas.parent('p5-container');
 
   // p5 비디오 (HTMLVideoElement는 video.elt)
   video = createCapture(VIDEO);
-  video.size(640, 480);
+  video.size(800, 600);
   video.hide(); // DOM 요소로 표시되는 것은 숨김. 캔버스에 직접 그릴 예정.
 
   // MediaPipe FaceMesh 초기화
@@ -52,8 +52,8 @@ function setup() {
       // send에는 video element 전달
       await faceMeshMP.send({ image: video.elt });
     },
-    width: 640,
-    height: 480,
+    width: 800,
+    height: 600,
   });
   cameraMP.start();
 
